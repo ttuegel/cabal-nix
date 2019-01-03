@@ -230,7 +230,7 @@ forPlatforms compilerInfo platforms cabalFile =
     cabalHash <- nixHash cabalFile
     let hashesFile = FilePath.replaceExtension cabalFile "json"
     src <- getSrc hashesFile
-    gPkgDesc <- readGenericPackageDescription Verbosity.normal cabalFile
+    gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
     let
       packages = Map.fromSet forPlatform' platforms
         where
