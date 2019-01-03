@@ -1,0 +1,34 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.31.1.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 69ba07dfbf683823e3ee297a89400fd8007d9184910e92ba96389fa487bf5687
+
+name:           cabal-nix
+version:        0.0.1.0
+category:       Language
+author:         Thomas Tuegel
+maintainer:     thomas.tuegel@runtimeverification.com
+copyright:      2019 Runtime Verification Inc
+license:        NCSA
+license-file:   LICENSE
+build-type:     Simple
+
+executable cabal-nix
+  main-is: cabal-nix.hs
+  other-modules:
+      Paths_cabal_nix
+  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings
+  build-depends:
+      Cabal
+    , aeson
+    , base >=4.7
+    , containers
+    , filepath
+    , hnix
+    , optparse-applicative
+    , process
+    , text
+  default-language: Haskell2010

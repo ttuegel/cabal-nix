@@ -1,0 +1,32 @@
+name:                cabal-nix
+version:             0.0.1.0
+license:             NCSA
+license-file:        LICENSE
+author:              "Thomas Tuegel"
+maintainer:          "thomas.tuegel@runtimeverification.com"
+copyright:           "2019 Runtime Verification Inc"
+category:            Language
+
+dependencies:
+  - base >= 4.7
+  - aeson
+  - Cabal
+  - containers
+  - filepath
+  - hnix
+  - optparse-applicative
+  - process
+  - text
+
+default-extensions:
+  - DeriveDataTypeable
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - GeneralizedNewtypeDeriving
+  - LambdaCase
+  - NamedFieldPuns
+  - OverloadedStrings
+
+executables:
+  cabal-nix:
+    main: cabal-nix.hs
