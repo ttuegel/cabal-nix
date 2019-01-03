@@ -211,7 +211,6 @@ forPlatform
     -> Platform
     -> Package
 forPlatform cabalHash src compilerInfo gPkgDesc platform =
-    fromPackageDescription
-        cabalHash
-        src
-        (finalize compilerInfo gPkgDesc platform)
+    fromPackageDescription cabalHash src finalized
+  where
+    finalized = finalize compilerInfo gPkgDesc platform

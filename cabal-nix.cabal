@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ae8fa325e23c59fc9a82bbdf17b49b369901356b131a8f2278bb4c598b16b579
+-- hash: 4a407b4da85efa2d688d76c43dbec96a696bb2a8e806df020660d691402355eb
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -20,6 +20,7 @@ library
   exposed-modules:
       Depends
       Hash
+      Options
       Orphans
       Package
       Revision
