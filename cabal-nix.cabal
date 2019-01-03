@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 516037dc804e9d91ea0b6c37cc5ff60e3d8b73d3e0272d77f2afc8dcfe20c607
+-- hash: ae8fa325e23c59fc9a82bbdf17b49b369901356b131a8f2278bb4c598b16b579
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -16,6 +16,31 @@ license:        NCSA
 license-file:   LICENSE
 build-type:     Simple
 
+library
+  exposed-modules:
+      Depends
+      Hash
+      Orphans
+      Package
+      Revision
+      Src
+  other-modules:
+      Paths_cabal_nix
+  hs-source-dirs:
+      src
+  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings
+  build-depends:
+      Cabal
+    , aeson
+    , base >=4.7
+    , bytestring
+    , containers
+    , filepath
+    , optparse-applicative
+    , process
+    , text
+  default-language: Haskell2010
+
 executable cabal-nix
   main-is: cabal-nix.hs
   other-modules:
@@ -26,6 +51,7 @@ executable cabal-nix
     , aeson
     , base >=4.7
     , bytestring
+    , cabal-nix
     , containers
     , filepath
     , optparse-applicative

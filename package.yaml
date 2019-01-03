@@ -27,6 +27,12 @@ default-extensions:
   - NamedFieldPuns
   - OverloadedStrings
 
+library:
+  source-dirs:
+    - src
+
 executables:
   cabal-nix:
     main: cabal-nix.hs
+    dependencies:
+      - cabal-nix
