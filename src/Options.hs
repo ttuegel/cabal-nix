@@ -14,6 +14,13 @@ parseCabalFile =
     info =
         [ Options.metavar "CABAL_FILE" ]
 
+parseAllCabalHashes :: Options.Parser FilePath
+parseAllCabalHashes =
+    Options.strArgument (mconcat info)
+  where
+    info =
+        [ Options.metavar "ALL_CABAL_HASHES" ]
+
 parseCompilerInfo :: Options.Parser CompilerInfo
 parseCompilerInfo =
     fromCompilerId <$> Options.option readCompilerId (mconcat info)

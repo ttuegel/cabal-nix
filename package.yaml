@@ -40,3 +40,4 @@ executables:
     main: all-cabal-nix.hs
     dependencies:
       - cabal-nix
+      - directory
