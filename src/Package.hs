@@ -1,6 +1,7 @@
 module Package
     ( Package (..)
     , forPlatform
+    , forPlatforms
     ) where
 
 import Data.Aeson (ToJSON)
@@ -8,10 +9,12 @@ import Data.Aeson.Types ((.=))
 import Data.Data (Data)
 import Data.Map.Strict (Map)
 import Data.Maybe
+import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Distribution.Compiler (CompilerInfo)
 import Distribution.License (licenseToSPDX)
+import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.SPDX.License (License)
 import Distribution.System (Platform (..))
 import Distribution.Types.Benchmark (Benchmark (..))
@@ -33,6 +36,8 @@ import qualified Data.Map.Strict as Map
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
+import qualified Distribution.Verbosity as Verbosity
+import qualified System.FilePath as FilePath
 
 import Depends (Depends)
 import Hash
@@ -214,3 +219,20 @@ forPlatform cabalHash src compilerInfo gPkgDesc platform =
     fromPackageDescription cabalHash src finalized
   where
     finalized = finalize compilerInfo gPkgDesc platform
+
+forPlatforms
+    :: CompilerInfo
+    -> Set Platform  -- ^ Supported platforms
+    -> FilePath  -- ^ Cabal package description file
+    -> IO (Map Platform Package)
+forPlatforms compilerInfo platforms cabalFile =
+  do
+    cabalHash <- nixHash cabalFile
+    let hashesFile = FilePath.replaceExtension cabalFile "json"
+    src <- getSrc hashesFile
+    gPkgDesc <- readGenericPackageDescription Verbosity.normal cabalFile
+    let
+      packages = Map.fromSet forPlatform' platforms
+        where
+          forPlatform' = Package.forPlatform cabalHash src compilerInfo gPkgDesc
+    return packages
