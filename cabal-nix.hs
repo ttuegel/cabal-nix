@@ -12,11 +12,9 @@ import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
-import Distribution.Compiler (CompilerFlavor)
-import Distribution.Compiler (CompilerInfo)
+import Distribution.Compiler (CompilerId, CompilerInfo)
 import Distribution.License (licenseToSPDX)
 import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
-import Distribution.Simple.Program (defaultProgramDb)
 import Distribution.SPDX.License (License)
 import Distribution.System (Arch (..))
 import Distribution.System (OS (..))
@@ -44,10 +42,11 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Distribution.Compat.ReadP as ReadP
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
 import qualified Distribution.Simple.Compiler as Compiler
-import qualified Distribution.Simple.Configure as Configure
+import qualified Distribution.Text
 import qualified Distribution.Verbosity as Verbosity
 import qualified Options.Applicative as Options
 import qualified System.FilePath as FilePath
@@ -273,18 +272,6 @@ finalize compilerInfo gPkgDesc platform =
     dependencySatisfiable _ = True
     extraConstraints = []
 
-getCompilerInfo :: CompilerFlavor -> IO CompilerInfo
-getCompilerInfo flavor =
-  do
-    (compiler, _, _) <-
-        Configure.configCompilerEx
-            (Just flavor)
-            Nothing
-            Nothing
-            defaultProgramDb
-            Verbosity.normal
-    return (Compiler.compilerInfo compiler)
-
 platforms :: Set Platform
 platforms =
     Set.fromList
@@ -330,31 +317,52 @@ packageForPlatform cabalHash src compilerInfo gPkgDesc platform =
 data Options =
     Options
         { cabalFile :: FilePath
+        , compilerId :: CompilerId
         }
 
 parseOptions :: Options.Parser Options
 parseOptions =
     Options
         <$> parseCabalFile
+        <*> parseCompilerId
   where
     parseCabalFile =
         Options.strArgument (mconcat info)
       where
         info =
             [ Options.metavar "CABAL_FILE" ]
+    parseCompilerId =
+        Options.option readCompilerId (mconcat info)
+      where
+        info =
+            [ Options.long "compiler"
+            , Options.metavar "COMPILER"
+            , Options.help
+                "Generate package configuration for COMPILER (FLAVOR-[VERSION])"
+            ]
+        readCompilerId =
+            Options.maybeReader
+                (\str ->
+                  case ReadP.readP_to_S Distribution.Text.parse str of
+                    [] -> Nothing
+                    (compilerId, _) : _ -> Just compilerId
+                )
 
 main :: IO ()
 main =
   do
-    Options { cabalFile } <- Options.execParser parserInfo
+    options@Options { cabalFile } <- Options.execParser parserInfo
     cabalHash <- nixHash cabalFile
     let hashesFile = FilePath.replaceExtension cabalFile "json"
     src <- getSrc hashesFile
-    compilerInfo <- getCompilerInfo Compiler.GHC
     gPkgDesc <- readGenericPackageDescription Verbosity.normal cabalFile
     let
       packages = Map.fromSet packageForPlatform' platforms
         where
+          compilerInfo = Compiler.unknownCompilerInfo compilerId abiTag
+            where
+              abiTag = Compiler.NoAbiTag
+              Options { compilerId } = options
           packageForPlatform' =
               packageForPlatform cabalHash src compilerInfo gPkgDesc
     print packages
