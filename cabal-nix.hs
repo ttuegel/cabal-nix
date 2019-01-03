@@ -310,7 +310,9 @@ nixHash file =
       args = [ "--type", "sha256", "--base32", file ]
       inp = mempty
     unpacked <- Process.readProcess "nix-hash" args inp
-    return (fromString unpacked)
+    case lines unpacked of
+      [] -> error "nix-hash did not return a hash"
+      hash : _ -> return (fromString hash)
 
 packageForPlatform
     :: Hash
