@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 69ba07dfbf683823e3ee297a89400fd8007d9184910e92ba96389fa487bf5687
+-- hash: 516037dc804e9d91ea0b6c37cc5ff60e3d8b73d3e0272d77f2afc8dcfe20c607
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -25,9 +25,9 @@ executable cabal-nix
       Cabal
     , aeson
     , base >=4.7
+    , bytestring
     , containers
     , filepath
-    , hnix
     , optparse-applicative
     , process
     , text
