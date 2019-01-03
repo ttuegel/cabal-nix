@@ -36,3 +36,7 @@ executables:
     main: cabal-nix.hs
     dependencies:
       - cabal-nix
+  all-cabal-nix:
+    main: all-cabal-nix.hs
+    dependencies:
+      - cabal-nix
