@@ -48,6 +48,26 @@ instance ToJSON Depends where
           where
             Depends { buildDepends } = depends
 
+    toEncoding depends =
+        (Aeson.pairs . mconcat)
+            [ "toolDepends" .= toolDependsValue
+            , "pkgconfigDepends" .= pkgconfigDependsValue
+            , "buildDepends" .= buildDependsValue
+            ]
+      where
+        toolDependsValue =
+            Map.fromSet id (Set.map Pretty.prettyShow toolDepends)
+          where
+            Depends { toolDepends } = depends
+        pkgconfigDependsValue =
+            Map.fromSet id (Set.map Pretty.prettyShow pkgconfigDepends)
+          where
+            Depends { pkgconfigDepends } = depends
+        buildDependsValue =
+            Map.fromSet id (Set.map Pretty.prettyShow buildDepends)
+          where
+            Depends { buildDepends } = depends
+
 instance Semigroup Depends where
     (<>) a b =
         Depends

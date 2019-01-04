@@ -22,6 +22,7 @@ prettyKey = Text.pack . Pretty.prettyShow
 
 instance ToJSON FlagName where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSONKey FlagName where
     toJSONKey = Aeson.toJSONKeyText prettyKey
@@ -31,21 +32,26 @@ instance ToJSONKey PackageIdentifier where
 
 instance ToJSON PackageIdentifier where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSON PackageName where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSON Platform where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSONKey Platform where
     toJSONKey = Aeson.toJSONKeyText prettyKey
 
 instance ToJSON UnqualComponentName where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSONKey UnqualComponentName where
     toJSONKey = Aeson.toJSONKeyText prettyKey
 
 instance ToJSON Version where
     toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey

@@ -96,6 +96,31 @@ instance ToJSON Package where
         Package { flags } = pkg
         Package { license, homepage, synopsis } = pkg
 
+    toEncoding pkg =
+        (Aeson.pairs . mconcat)
+            [ "pname" .= Aeson.toJSON pkgName
+            , "version" .= Aeson.toJSON pkgVersion
+            , "revision" .= Aeson.toJSON revision
+            , "src" .= Aeson.toJSON src
+            , "libraries" .= Aeson.toJSON libraries
+            , "executables" .= Aeson.toJSON executables
+            , "tests" .= Aeson.toJSON tests
+            , "benchmarks" .= Aeson.toJSON benchmarks
+            , "setup" .= Aeson.toJSON setup
+            , "flags" .= Aeson.toJSON flags
+            , "license" .= Pretty.prettyShow license
+            , "homepage" .= Aeson.toJSON homepage
+            , "synopsis" .= Aeson.toJSON synopsis
+            ]
+      where
+        PackageIdentifier { pkgName, pkgVersion } = package
+          where
+            Package { package } = pkg
+        Package { revision, src } = pkg
+        Package { libraries, executables, tests, benchmarks, setup } = pkg
+        Package { flags } = pkg
+        Package { license, homepage, synopsis } = pkg
+
 fromPackageDescription
     :: Hash  -- ^ Hash of the Cabal package description
     -> Src

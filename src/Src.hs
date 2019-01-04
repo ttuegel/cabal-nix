@@ -38,8 +38,14 @@ instance FromJSON Src where
 instance ToJSON Src where
     toJSON Src { urls, hash } =
         Aeson.object
-            [ "urls" .= Aeson.toJSON urls
-            , "hash" .= Aeson.toJSON hash
+            [ "urls" .= urls
+            , "hash" .= hash
+            ]
+
+    toEncoding Src { urls, hash } =
+        (Aeson.pairs . mconcat)
+            [ "urls" .= urls
+            , "hash" .= hash
             ]
 
 readSrc :: FilePath -> IO Src

@@ -23,6 +23,12 @@ data Revision =
 instance ToJSON Revision where
     toJSON Revision { revision, hash } =
         Aeson.object
-            [ "revision" .= Aeson.toJSON revision
-            , "hash" .= Aeson.toJSON hash
+            [ "revision" .= revision
+            , "hash" .= hash
+            ]
+
+    toEncoding Revision { revision, hash } =
+        (Aeson.pairs . mconcat)
+            [ "revision" .= revision
+            , "hash" .= hash
             ]

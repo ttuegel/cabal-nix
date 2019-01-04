@@ -18,6 +18,7 @@ instance FromJSON Hash where
 
 instance ToJSON Hash where
     toJSON = Aeson.toJSON . getHash
+    toEncoding = Aeson.toEncoding . getHash
 
 nixHash :: FilePath -> IO Hash
 nixHash file =
