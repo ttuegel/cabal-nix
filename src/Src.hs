@@ -14,11 +14,7 @@ import qualified Data.Map.Strict as Map
 
 import Hash
 
-data Src =
-    Src
-        { urls :: [Text]
-        , hash :: Hash  -- ^ Source tarball hash
-        }
+data Src = Src { hash :: Hash }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 instance FromJSON Src where
@@ -27,26 +23,15 @@ instance FromJSON Src where
       where
         parseSrc obj =
           do
-            urls <- obj .: "package-locations"
             hashes <- obj .: "package-hashes"
             case Map.lookup sha256 hashes of
               Nothing -> fail "Missing SHA256 hash"
-              Just hash -> return Src { urls, hash }
+              Just hash -> return Src { hash }
           where
             sha256 :: Text = "SHA256"
 
 instance ToJSON Src where
-    toJSON Src { urls, hash } =
-        Aeson.object
-            [ "urls" .= urls
-            , "hash" .= hash
-            ]
-
-    toEncoding Src { urls, hash } =
-        (Aeson.pairs . mconcat)
-            [ "urls" .= urls
-            , "hash" .= hash
-            ]
+    toJSON Src { hash } = Aeson.object [ "hash" .= hash ]
 
 readSrc :: FilePath -> IO Src
 readSrc file =
