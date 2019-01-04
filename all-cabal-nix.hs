@@ -1,7 +1,6 @@
 module Main (main) where
 
 import Data.Map.Strict (Map)
-import Data.Maybe
 import Data.Set (Set)
 import Distribution.Compiler (CompilerInfo)
 import Distribution.Simple.Setup (readPToMaybe)
@@ -50,7 +49,7 @@ parseOptions =
 
 forPlatforms
     :: FilePath  -- ^ Cabal hashes
-    -> CompilerInfo
+    -> CompilerInfo  -- ^ Selected compiler
     -> PackageId
     -> IO (Map Platform Package)
 forPlatforms allCabalHashes compilerInfo packageId =
@@ -72,14 +71,15 @@ getPackageIds allCabalHashes package =
     subdirs <-
         Directory.listDirectory dir
             >>= Monad.filterM isDirectory . filter (not . isHiddenFile)
-    return (Set.fromList . mapMaybe getPackageId $ subdirs)
+    (return . Set.unions) (getPackageId <$> subdirs)
   where
     dir = allCabalHashes </> package
     isDirectory this = Directory.doesDirectoryExist (dir </> this)
     getPackageId version =
         case readPToMaybe Distribution.Text.parse version of
-          Nothing -> Nothing
-          Just pkgVersion -> Just PackageIdentifier { pkgName, pkgVersion }
+          Nothing -> Set.empty
+          Just pkgVersion ->
+              Set.singleton PackageIdentifier { pkgName, pkgVersion }
       where
         pkgName = mkPackageName package
 
@@ -100,7 +100,7 @@ main =
     Options { allCabalHashes, compilerInfo } <- Options.execParser parserInfo
     packages <- getPackages allCabalHashes
     allPackageIds <-
-        mconcat <$> traverse (getPackageIds allCabalHashes) packages
+        Set.unions <$> traverse (getPackageIds allCabalHashes) packages
     allPackages <-
         traverse
             (forPlatforms allCabalHashes compilerInfo)
