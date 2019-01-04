@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8ce5ab2c8e671df128a32dae02070ce3aed428d699a3d270e0bb602c057922ed
+-- hash: 2722642c52f02e03c32f60859671343b681122d698c11308370a3b22a41188dd
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -29,7 +29,7 @@ library
       Paths_cabal_nix
   hs-source-dirs:
       src
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings
+  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables
   build-depends:
       Cabal
     , aeson
@@ -46,7 +46,7 @@ executable all-cabal-nix
   main-is: all-cabal-nix.hs
   other-modules:
       Paths_cabal_nix
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings
+  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables
   ghc-options: -threaded "-with-rtsopts=-N -qg"
   build-depends:
       Cabal
@@ -71,7 +71,7 @@ executable cabal-nix
   main-is: cabal-nix.hs
   other-modules:
       Paths_cabal_nix
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings
+  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables
   build-depends:
       Cabal
     , aeson

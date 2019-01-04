@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Revision where
 
 import Data.Aeson (ToJSON)

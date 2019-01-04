@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Src where
 
 import Data.Aeson (FromJSON, ToJSON)
@@ -8,6 +10,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Map.Strict as Map
 
 import Hash
 
@@ -24,10 +27,13 @@ instance FromJSON Src where
       where
         parseSrc obj =
           do
-            hash <- obj .: "package-hashes" >>= getSha256
             urls <- obj .: "package-locations"
-            return Src { urls, hash }
-        getSha256 = Aeson.withObject "hashes" (\obj -> obj .: "SHA256")
+            hashes <- obj .: "package-hashes"
+            case Map.lookup sha256 hashes of
+              Nothing -> fail "Missing SHA256 hash"
+              Just hash -> return Src { urls, hash }
+          where
+            sha256 :: Text = "SHA256"
 
 instance ToJSON Src where
     toJSON Src { urls, hash } =

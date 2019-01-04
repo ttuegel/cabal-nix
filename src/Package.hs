@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Package
     ( Package (..)
     , forPlatform

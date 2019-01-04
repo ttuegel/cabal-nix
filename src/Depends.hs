@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Depends where
 
 import Data.Aeson (ToJSON)
