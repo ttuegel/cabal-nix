@@ -10,6 +10,7 @@ import Data.Data (Data)
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Set (Set)
+import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Distribution.Compiler (CompilerInfo)
@@ -29,11 +30,12 @@ import Distribution.Types.PackageDescription (PackageDescription (..))
 import Distribution.Types.PackageId (PackageIdentifier (..))
 import Distribution.Types.SetupBuildInfo (SetupBuildInfo (..))
 import Distribution.Types.TestSuite (TestSuite (..))
-import Distribution.Types.UnqualComponentName (unUnqualComponentName)
+import Distribution.Types.UnqualComponentName (UnqualComponentName, mkUnqualComponentName)
 
 import qualified Control.Exception as Exception
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
@@ -54,15 +56,15 @@ data Package =
         { package :: PackageIdentifier
         , revision :: Maybe Revision
         , src :: Src
-        , libraries :: Map String Depends
-        , executables :: Map String Depends
-        , tests :: Map String Depends
-        , benchmarks :: Map String Depends
+        , libraries :: Map UnqualComponentName Depends
+        , executables :: Map UnqualComponentName Depends
+        , tests :: Map UnqualComponentName Depends
+        , benchmarks :: Map UnqualComponentName Depends
         , setup :: Depends
         , flags :: Map FlagName Bool
         , license :: License
-        , homepage :: String
-        , synopsis :: String
+        , homepage :: Text
+        , synopsis :: Text
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
@@ -113,8 +115,14 @@ fromPackageDescription cabalHash src (pkgDesc, flagAssignment) =
         , synopsis
         }
   where
-    PackageDescription { package, homepage, synopsis } = pkgDesc
-    packageName = Pretty.prettyShow pkgName
+    PackageDescription { package } = pkgDesc
+    homepage = Text.pack homepage'
+      where
+        PackageDescription { homepage = homepage' } = pkgDesc
+    synopsis = Text.pack synopsis'
+      where
+        PackageDescription { synopsis = synopsis' } = pkgDesc
+    packageName = mkUnqualComponentName (Pretty.prettyShow pkgName)
       where
         PackageIdentifier { pkgName } = package
     fromBuildInfo buildInfo =
@@ -139,37 +147,31 @@ fromPackageDescription cabalHash src (pkgDesc, flagAssignment) =
       where
         PackageDescription { customFieldsPD } = pkgDesc
     libraries =
-        Map.fromList (fromLibrary <$> maybe id (:) library subLibraries)
+        Map.unions (fromLibrary <$> maybe id (:) library subLibraries)
       where
         PackageDescription { library, subLibraries } = pkgDesc
         fromLibrary Library { libName, libBuildInfo } =
-            ( maybe packageName unUnqualComponentName libName
-            , fromBuildInfo libBuildInfo
-            )
+            Map.singleton
+                (fromMaybe packageName libName)
+                (fromBuildInfo libBuildInfo)
     executables =
-        Map.fromList (fromExecutable <$> executables')
+        Map.unions (fromExecutable <$> executables')
       where
         PackageDescription { executables = executables' } = pkgDesc
         fromExecutable Executable { exeName, buildInfo } =
-            ( unUnqualComponentName exeName
-            , fromBuildInfo buildInfo
-            )
+            Map.singleton exeName (fromBuildInfo buildInfo)
     tests =
-        Map.fromList (fromTestSuite <$> testSuites)
+        Map.unions (fromTestSuite <$> testSuites)
       where
         PackageDescription { testSuites } = pkgDesc
         fromTestSuite TestSuite { testName, testBuildInfo } =
-            ( unUnqualComponentName testName
-            , fromBuildInfo testBuildInfo
-            )
+            Map.singleton testName (fromBuildInfo testBuildInfo)
     benchmarks =
-        Map.fromList (fromBenchmark <$> benchmarks')
+        Map.unions (fromBenchmark <$> benchmarks')
       where
         PackageDescription { benchmarks = benchmarks' } = pkgDesc
         fromBenchmark Benchmark { benchmarkName, benchmarkBuildInfo } =
-            ( unUnqualComponentName benchmarkName
-            , fromBuildInfo benchmarkBuildInfo
-            )
+            Map.singleton benchmarkName (fromBuildInfo benchmarkBuildInfo)
     setup =
         fromMaybe mempty (fromSetupBuildInfo <$> setupBuildInfo)
       where
@@ -232,7 +234,7 @@ forPlatforms compilerInfo platforms cabalFile =
       (do
         cabalHash <- nixHash cabalFile
         let hashesFile = FilePath.replaceExtension cabalFile "json"
-        src <- getSrc hashesFile
+        src <- readSrc hashesFile
         gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
         let
           forPlatform' = Package.forPlatform cabalHash src compilerInfo gPkgDesc

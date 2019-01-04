@@ -3,18 +3,17 @@ module Src where
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson ((.:), (.=))
 import Data.Data (Data)
-import Data.Foldable
+import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Text as Text
 
 import Hash
 
 data Src =
     Src
-        { urls :: [String]
+        { urls :: [Text]
         , hash :: Hash  -- ^ Source tarball hash
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
@@ -26,11 +25,9 @@ instance FromJSON Src where
         parseSrc obj =
           do
             hash <- obj .: "package-hashes" >>= getSha256
-            urls <- obj .: "package-locations" >>= getUrls
+            urls <- obj .: "package-locations"
             return Src { urls, hash }
         getSha256 = Aeson.withObject "hashes" (\obj -> obj .: "SHA256")
-        getUrls = Aeson.withArray "URLs" (traverse getUrl . toList)
-        getUrl = Aeson.withText "URL" (return . Text.unpack)
 
 instance ToJSON Src where
     toJSON Src { urls, hash } =
@@ -39,8 +36,8 @@ instance ToJSON Src where
             , "hash" .= Aeson.toJSON hash
             ]
 
-getSrc :: FilePath -> IO Src
-getSrc file =
+readSrc :: FilePath -> IO Src
+readSrc file =
   do
     decoded <- Aeson.eitherDecodeFileStrict file
     case decoded of

@@ -9,6 +9,7 @@ import Distribution.System (Platform (..))
 import Distribution.Types.GenericPackageDescription (FlagName)
 import Distribution.Types.PackageId (PackageIdentifier)
 import Distribution.Types.PackageName (PackageName)
+import Distribution.Types.UnqualComponentName (UnqualComponentName)
 import Distribution.Types.Version (Version)
 
 import qualified Data.Aeson as Aeson
@@ -38,6 +39,12 @@ instance ToJSON Platform where
     toJSON = Aeson.toJSON . prettyKey
 
 instance ToJSONKey Platform where
+    toJSONKey = Aeson.toJSONKeyText prettyKey
+
+instance ToJSON UnqualComponentName where
+    toJSON = Aeson.toJSON . prettyKey
+
+instance ToJSONKey UnqualComponentName where
     toJSONKey = Aeson.toJSONKeyText prettyKey
 
 instance ToJSON Version where
