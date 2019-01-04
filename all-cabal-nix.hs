@@ -1,5 +1,7 @@
 module Main (main) where
 
+import Control.Concurrent (QSem)
+import Control.Concurrent.Async (Concurrently)
 import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Distribution.Compiler (CompilerInfo)
@@ -9,16 +11,21 @@ import Distribution.System (OS (..))
 import Distribution.System (Platform (..))
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
+import Pipes ((>->))
 import System.FilePath ((</>), (<.>))
 
+import qualified Control.Concurrent as Concurrent
+import qualified Control.Concurrent.Async as Async
+import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
-import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as ByteString
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
 import qualified Options.Applicative as Options
+import qualified Pipes as Pipes
+import qualified Pipes.Aeson.Unchecked as Pipes.Aeson
+import qualified Pipes.ByteString as Pipes.ByteString
 import qualified System.Directory as Directory
 
 import Orphans ()
@@ -47,13 +54,30 @@ parseOptions =
         <$> Options.parseAllCabalHashes
         <*> Options.parseCompilerInfo
 
+concurrently
+    :: QSem
+    -> IO a
+    -> Concurrently a
+concurrently qsem action =
+    Async.Concurrently (withQSem qsem action)
+
+withQSem
+    :: QSem
+    -> IO a
+    -> IO a
+withQSem qsem =
+    Exception.bracket_
+        (Concurrent.waitQSem qsem)
+        (Concurrent.signalQSem qsem)
+
 forPlatforms
-    :: FilePath  -- ^ Cabal hashes
+    :: QSem
+    -> FilePath -- ^ Cabal hashes
     -> CompilerInfo  -- ^ Selected compiler
     -> PackageId
-    -> IO (Map Platform Package)
-forPlatforms allCabalHashes compilerInfo packageId =
-    Package.forPlatforms compilerInfo platforms cabalFile
+    -> Concurrently (Map Platform Package)
+forPlatforms qsem allCabalHashes compilerInfo packageId =
+    concurrently qsem (Package.forPlatforms compilerInfo platforms cabalFile)
   where
     cabalFile =
         allCabalHashes </> package </> version </> package <.> "cabal"
@@ -101,12 +125,16 @@ main =
     packages <- getPackages allCabalHashes
     allPackageIds <-
         Set.unions <$> traverse (getPackageIds allCabalHashes) packages
+    njobs <- Concurrent.getNumCapabilities
+    qsem <- Concurrent.newQSem njobs
     allPackages <-
-        traverse
-            (forPlatforms allCabalHashes compilerInfo)
-            (Map.fromSet id allPackageIds)
-    ByteString.putStr (Aeson.encode allPackages)
-    putStr "\n"
+        Async.runConcurrently
+            (traverse
+                (forPlatforms qsem allCabalHashes compilerInfo)
+                (Map.fromSet id allPackageIds)
+            )
+    Pipes.runEffect
+        (Pipes.Aeson.encode allPackages >-> Pipes.ByteString.stdout)
     return ()
   where
     parserInfo =
