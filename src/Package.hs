@@ -31,6 +31,7 @@ import Distribution.Types.SetupBuildInfo (SetupBuildInfo (..))
 import Distribution.Types.TestSuite (TestSuite (..))
 import Distribution.Types.UnqualComponentName (unUnqualComponentName)
 
+import qualified Control.Exception as Exception
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
@@ -38,6 +39,7 @@ import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
 import qualified Distribution.Verbosity as Verbosity
 import qualified System.FilePath as FilePath
+import qualified System.IO as IO
 
 import Depends (Depends)
 import Hash
@@ -226,13 +228,20 @@ forPlatforms
     -> FilePath  -- ^ Cabal package description file
     -> IO (Map Platform Package)
 forPlatforms compilerInfo platforms cabalFile =
-  do
-    cabalHash <- nixHash cabalFile
-    let hashesFile = FilePath.replaceExtension cabalFile "json"
-    src <- getSrc hashesFile
-    gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
-    let
-      packages = Map.fromSet forPlatform' platforms
-        where
+    Exception.handle nonFatalErrors
+      (do
+        cabalHash <- nixHash cabalFile
+        let hashesFile = FilePath.replaceExtension cabalFile "json"
+        src <- getSrc hashesFile
+        gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
+        let
           forPlatform' = Package.forPlatform cabalHash src compilerInfo gPkgDesc
-    return packages
+          packages = Map.fromSet forPlatform' platforms
+        return packages
+      )
+  where
+    -- Display errors, but do not abort; return an empty Map instead.
+    nonFatalErrors (Exception.SomeException e) =
+      do
+        IO.hPutStrLn IO.stderr (Exception.displayException e)
+        return Map.empty
