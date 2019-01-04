@@ -3,7 +3,7 @@ module Main (main) where
 import Control.Concurrent (QSem)
 import Control.Concurrent.Async (Concurrently)
 import Data.Foldable
-import Data.Set (Set)
+import Data.Maybe
 import Distribution.Simple.Setup (readPToMaybe)
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
@@ -14,7 +14,6 @@ import qualified Control.Concurrent as Concurrent
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
-import qualified Data.Set as Set
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
 import qualified Options.Applicative as Options
@@ -57,12 +56,11 @@ withQSem qsem =
         (Concurrent.signalQSem qsem)
 
 writePackage
-    :: QSem
-    -> FilePath
+    :: FilePath
     -> PackageId
-    -> Concurrently ()
-writePackage qsem allCabalHashes packageId =
-    (concurrently qsem . Exception.handle nonFatalErrors)
+    -> IO ()
+writePackage allCabalHashes packageId =
+    Exception.handle nonFatalErrors
         (do
           package <-
               Package.fromAllCabalHashes
@@ -82,6 +80,18 @@ writePackage qsem allCabalHashes packageId =
     nonFatalErrors (Exception.SomeException e) =
       do
         IO.hPutStrLn IO.stderr (Exception.displayException e)
+
+writePackages
+    :: QSem
+    -> FilePath
+    -> FilePath
+    -> Concurrently ()
+writePackages qsem allCabalHashes package =
+    concurrently qsem
+        (do
+          packageIds <- getPackageIds allCabalHashes package
+          traverse_ (writePackage allCabalHashes) packageIds
+        )
 
 cabalFile :: FilePath -> PackageId -> FilePath
 cabalFile allCabalHashes PackageIdentifier { pkgName, pkgVersion } =
@@ -104,21 +114,21 @@ packageFile packageId@PackageIdentifier { pkgName } =
 getPackageIds
     :: FilePath  -- ^ Cabal hashes
     -> FilePath  -- ^ Package directory
-    -> IO (Set PackageId)
+    -> IO [PackageId]
 getPackageIds allCabalHashes package =
   do
     subdirs <-
         Directory.listDirectory dir
             >>= Monad.filterM isDirectory . filter (not . isHiddenFile)
-    (return . Set.unions) (getPackageId <$> subdirs)
+    return (mapMaybe getPackageId subdirs)
   where
     dir = allCabalHashes </> package
     isDirectory this = Directory.doesDirectoryExist (dir </> this)
     getPackageId version =
         case readPToMaybe Distribution.Text.parse version of
-          Nothing -> Set.empty
+          Nothing -> Nothing
           Just pkgVersion ->
-              Set.singleton PackageIdentifier { pkgName, pkgVersion }
+              Just PackageIdentifier { pkgName, pkgVersion }
       where
         pkgName = mkPackageName package
 
@@ -140,13 +150,8 @@ main =
     packages <- getPackages allCabalHashes
     njobs <- Concurrent.getNumCapabilities
     qsem <- Concurrent.newQSem njobs
-    allPackageIds <-
-        mconcat <$> traverse (getPackageIds allCabalHashes) packages
     Async.runConcurrently
-        (traverse_
-            (writePackage qsem allCabalHashes)
-            (Set.toList allPackageIds)
-        )
+        (traverse_ (writePackages qsem allCabalHashes) packages)
     return ()
   where
     parserInfo =
