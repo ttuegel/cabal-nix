@@ -68,9 +68,14 @@ getPackageIds
     -> FilePath  -- ^ Package directory
     -> IO (Set PackageId)
 getPackageIds allCabalHashes package =
-    Set.fromList . mapMaybe getPackageId <$> Directory.listDirectory dir
+  do
+    subdirs <-
+        Directory.listDirectory dir
+            >>= Monad.filterM isDirectory . filter (not . isHiddenFile)
+    return (Set.fromList . mapMaybe getPackageId $ subdirs)
   where
     dir = allCabalHashes </> package
+    isDirectory this = Directory.doesDirectoryExist (dir </> this)
     getPackageId version =
         case readPToMaybe Distribution.Text.parse version of
           Nothing -> Nothing
