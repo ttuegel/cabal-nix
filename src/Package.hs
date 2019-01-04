@@ -12,13 +12,10 @@ import Data.Data (Data)
 import Data.Map.Strict (Map)
 import Data.Maybe
 import Data.Set (Set)
-import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Distribution.Compiler (CompilerInfo)
-import Distribution.License (licenseToSPDX)
 import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
-import Distribution.SPDX.License (License)
 import Distribution.System (Platform (..))
 import Distribution.Types.Benchmark (Benchmark (..))
 import Distribution.Types.BuildInfo (BuildInfo (..))
@@ -37,118 +34,67 @@ import Distribution.Types.UnqualComponentName (UnqualComponentName, mkUnqualComp
 import qualified Control.Exception as Exception
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
 import qualified Distribution.Verbosity as Verbosity
-import qualified System.FilePath as FilePath
 import qualified System.IO as IO
 
 import Depends (Depends)
-import Hash
 import Orphans ()
-import Revision
-import Src
 
 import qualified Depends
 
 data Package =
     Package
-        { package :: PackageIdentifier
-        , revision :: Maybe Revision
-        , src :: Src
-        , libraries :: Map UnqualComponentName Depends
+        { libraries :: Map UnqualComponentName Depends
         , executables :: Map UnqualComponentName Depends
         , tests :: Map UnqualComponentName Depends
         , benchmarks :: Map UnqualComponentName Depends
         , setup :: Depends
         , flags :: Map FlagName Bool
-        , license :: License
-        , homepage :: Text
-        , synopsis :: Text
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 instance ToJSON Package where
     toJSON pkg =
         Aeson.object
-            [ "pname" .= Aeson.toJSON pkgName
-            , "version" .= Aeson.toJSON pkgVersion
-            , "revision" .= Aeson.toJSON revision
-            , "src" .= Aeson.toJSON src
-            , "libraries" .= Aeson.toJSON libraries
-            , "executables" .= Aeson.toJSON executables
-            , "tests" .= Aeson.toJSON tests
-            , "benchmarks" .= Aeson.toJSON benchmarks
-            , "setup" .= Aeson.toJSON setup
-            , "flags" .= Aeson.toJSON flags
-            , "license" .= Pretty.prettyShow license
-            , "homepage" .= Aeson.toJSON homepage
-            , "synopsis" .= Aeson.toJSON synopsis
+            [ "libraries" .= libraries
+            , "executables" .= executables
+            , "tests" .= tests
+            , "benchmarks" .= benchmarks
+            , "setup" .= setup
+            , "flags" .= flags
             ]
       where
-        PackageIdentifier { pkgName, pkgVersion } = package
-          where
-            Package { package } = pkg
-        Package { revision, src } = pkg
         Package { libraries, executables, tests, benchmarks, setup } = pkg
         Package { flags } = pkg
-        Package { license, homepage, synopsis } = pkg
 
     toEncoding pkg =
         (Aeson.pairs . mconcat)
-            [ "pname" .= Aeson.toJSON pkgName
-            , "version" .= Aeson.toJSON pkgVersion
-            , "revision" .= Aeson.toJSON revision
-            , "src" .= Aeson.toJSON src
-            , "libraries" .= Aeson.toJSON libraries
-            , "executables" .= Aeson.toJSON executables
-            , "tests" .= Aeson.toJSON tests
-            , "benchmarks" .= Aeson.toJSON benchmarks
-            , "setup" .= Aeson.toJSON setup
-            , "flags" .= Aeson.toJSON flags
-            , "license" .= Pretty.prettyShow license
-            , "homepage" .= Aeson.toJSON homepage
-            , "synopsis" .= Aeson.toJSON synopsis
+            [ "libraries" .= libraries
+            , "executables" .= executables
+            , "tests" .= tests
+            , "benchmarks" .= benchmarks
+            , "setup" .= setup
+            , "flags" .= flags
             ]
       where
-        PackageIdentifier { pkgName, pkgVersion } = package
-          where
-            Package { package } = pkg
-        Package { revision, src } = pkg
         Package { libraries, executables, tests, benchmarks, setup } = pkg
         Package { flags } = pkg
-        Package { license, homepage, synopsis } = pkg
 
-fromPackageDescription
-    :: Hash  -- ^ Hash of the Cabal package description
-    -> Src
-    -> (PackageDescription, FlagAssignment)
-    -> Package
-fromPackageDescription cabalHash src (pkgDesc, flagAssignment) =
+fromPackageDescription :: (PackageDescription, FlagAssignment) -> Package
+fromPackageDescription (pkgDesc, flagAssignment) =
     Package
-        { package
-        , revision
-        , src
-        , libraries
+        { libraries
         , executables
         , tests
         , benchmarks
         , setup
         , flags
-        , license
-        , homepage
-        , synopsis
         }
   where
     PackageDescription { package } = pkgDesc
-    homepage = Text.pack homepage'
-      where
-        PackageDescription { homepage = homepage' } = pkgDesc
-    synopsis = Text.pack synopsis'
-      where
-        PackageDescription { synopsis = synopsis' } = pkgDesc
     packageName = mkUnqualComponentName (Pretty.prettyShow pkgName)
       where
         PackageIdentifier { pkgName } = package
@@ -165,14 +111,6 @@ fromPackageDescription cabalHash src (pkgDesc, flagAssignment) =
                 (BuildToolDepends.getAllToolDependencies pkgDesc buildInfo)
         BuildInfo { pkgconfigDepends } = buildInfo
         BuildInfo { targetBuildDepends } = buildInfo
-    revision =
-      case lookup "x-revision" customFieldsPD of
-        Nothing ->
-            Nothing
-        Just n ->
-            Just Revision { revision = read n, hash = cabalHash }
-      where
-        PackageDescription { customFieldsPD } = pkgDesc
     libraries =
         Map.unions (fromLibrary <$> maybe id (:) library subLibraries)
       where
@@ -206,9 +144,6 @@ fromPackageDescription cabalHash src (pkgDesc, flagAssignment) =
         fromSetupBuildInfo SetupBuildInfo { setupDepends } =
             mconcat (Depends.fromDependency <$> setupDepends)
     flags = Map.fromList (unFlagAssignment flagAssignment)
-    license = either id licenseToSPDX licenseRaw
-      where
-        PackageDescription { licenseRaw } = pkgDesc
 
 finalize
     :: CompilerInfo
@@ -240,16 +175,12 @@ finalize compilerInfo gPkgDesc platform =
     extraConstraints = []
 
 forPlatform
-    :: Hash
-    -> Src
-    -> CompilerInfo
+    :: CompilerInfo
     -> GenericPackageDescription
     -> Platform
     -> Package
-forPlatform cabalHash src compilerInfo gPkgDesc platform =
-    fromPackageDescription cabalHash src finalized
-  where
-    finalized = finalize compilerInfo gPkgDesc platform
+forPlatform compilerInfo gPkgDesc platform =
+    fromPackageDescription (finalize compilerInfo gPkgDesc platform)
 
 forPlatforms
     :: CompilerInfo
@@ -259,12 +190,9 @@ forPlatforms
 forPlatforms compilerInfo platforms cabalFile =
     Exception.handle nonFatalErrors
       (do
-        cabalHash <- nixHash cabalFile
-        let hashesFile = FilePath.replaceExtension cabalFile "json"
-        src <- readSrc hashesFile
         gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
         let
-          forPlatform' = Package.forPlatform cabalHash src compilerInfo gPkgDesc
+          forPlatform' = Package.forPlatform compilerInfo gPkgDesc
           packages = Map.fromSet forPlatform' platforms
         return packages
       )

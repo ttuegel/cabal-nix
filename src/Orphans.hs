@@ -16,6 +16,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.Text as Text
 import qualified Distribution.Pretty as Pretty
+import qualified Distribution.SPDX.License as SPDX
 
 prettyKey :: Pretty a => a -> Text
 prettyKey = Text.pack . Pretty.prettyShow
@@ -26,6 +27,10 @@ instance ToJSON FlagName where
 
 instance ToJSONKey FlagName where
     toJSONKey = Aeson.toJSONKeyText prettyKey
+
+instance ToJSON SPDX.License where
+    toJSON = Aeson.toJSON . prettyKey
+    toEncoding = Aeson.toEncoding . prettyKey
 
 instance ToJSONKey PackageIdentifier where
     toJSONKey = Aeson.toJSONKeyText prettyKey

@@ -27,6 +27,7 @@ default-extensions:
   - NamedFieldPuns
   - OverloadedStrings
   - ScopedTypeVariables
+  - ViewPatterns
 
 library:
   source-dirs:
