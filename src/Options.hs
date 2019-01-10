@@ -1,6 +1,7 @@
 module Options where
 
 import Distribution.Compiler (CompilerInfo)
+import Distribution.System (Platform)
 
 import qualified Distribution.Compat.ReadP as ReadP
 import qualified Distribution.Simple.Compiler as Compiler
@@ -35,10 +36,24 @@ parseCompilerInfo =
         , Options.help
             "Generate package configuration for COMPILER (FLAVOR-[VERSION])"
         ]
-    readCompilerId =
-        Options.maybeReader
-            (\str ->
-              case ReadP.readP_to_S Distribution.Text.parse str of
-                [] -> Nothing
-                (compilerId, _) : _ -> Just compilerId
-            )
+    readCompilerId = readText
+
+readText :: Distribution.Text.Text a => Options.ReadM a
+readText =
+    Options.maybeReader
+        (\str ->
+          case ReadP.readP_to_S Distribution.Text.parse str of
+            [] -> Nothing
+            (parsed, _) : _ -> Just parsed
+        )
+
+parsePlatform :: Options.Parser Platform
+parsePlatform =
+    Options.option readPlatform (mconcat info)
+  where
+    info =
+        [ Options.long "platform"
+        , Options.metavar "PLATFORM"
+        , Options.help "Generate package configuration for PLATFORM (ARCH-OS)"
+        ]
+    readPlatform = readText
