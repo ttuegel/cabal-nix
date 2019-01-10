@@ -1,14 +1,12 @@
 module Main (main) where
 
-import Data.Set (Set)
 import Distribution.Compiler (CompilerInfo)
-import Distribution.System (Arch (..))
-import Distribution.System (OS (..))
+import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.System (Platform (..))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as ByteString
-import qualified Data.Set as Set
+import qualified Distribution.Verbosity as Verbosity
 import qualified Options.Applicative as Options
 
 import Orphans ()
@@ -16,18 +14,11 @@ import Orphans ()
 import qualified Options
 import qualified Package
 
-platforms :: Set Platform
-platforms =
-    Set.fromList
-        [ Platform I386 Linux
-        , Platform X86_64 Linux
-        , Platform X86_64 OSX
-        ]
-
 data Options =
     Options
         { cabalFile :: FilePath
         , compilerInfo :: CompilerInfo
+        , platform :: Platform
         }
 
 parseOptions :: Options.Parser Options
@@ -35,13 +26,16 @@ parseOptions =
     Options
         <$> Options.parseCabalFile
         <*> Options.parseCompilerInfo
+        <*> Options.parsePlatform
 
 main :: IO ()
 main =
   do
-    Options { cabalFile, compilerInfo } <- Options.execParser parserInfo
-    packages <- Package.forPlatforms compilerInfo platforms cabalFile
-    ByteString.putStr (Aeson.encode packages)
+    options <- Options.execParser parserInfo
+    let Options { cabalFile, compilerInfo, platform } = options
+    gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
+    let package = Package.forPlatform compilerInfo gPkgDesc platform
+    ByteString.putStr (Aeson.encode package)
     putStr "\n"
     return ()
   where
