@@ -6,8 +6,6 @@ module Package
     , forPlatforms
     ) where
 
-import Data.Aeson (ToJSON)
-import Data.Aeson.Types ((.=))
 import Data.Data (Data)
 import Data.Map.Strict (Map)
 import Data.Maybe
@@ -22,18 +20,20 @@ import Distribution.Types.BuildInfo (BuildInfo (..))
 import Distribution.Types.ComponentRequestedSpec (ComponentRequestedSpec (..))
 import Distribution.Types.Executable (Executable (..))
 import Distribution.Types.GenericPackageDescription (FlagAssignment, unFlagAssignment)
-import Distribution.Types.GenericPackageDescription (FlagName)
+import Distribution.Types.GenericPackageDescription (FlagName, unFlagName)
 import Distribution.Types.GenericPackageDescription (GenericPackageDescription)
 import Distribution.Types.Library (Library (..))
 import Distribution.Types.PackageDescription (PackageDescription (..))
 import Distribution.Types.PackageId (PackageIdentifier (..))
 import Distribution.Types.SetupBuildInfo (SetupBuildInfo (..))
 import Distribution.Types.TestSuite (TestSuite (..))
-import Distribution.Types.UnqualComponentName (UnqualComponentName, mkUnqualComponentName)
+import Distribution.Types.UnqualComponentName (UnqualComponentName)
+import Distribution.Types.UnqualComponentName (mkUnqualComponentName)
+import Distribution.Types.UnqualComponentName (unUnqualComponentName)
 
 import qualified Control.Exception as Exception
-import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import qualified Distribution.PackageDescription.Configuration as PackageDescription
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
@@ -41,9 +41,11 @@ import qualified Distribution.Verbosity as Verbosity
 import qualified System.IO as IO
 
 import Depends (Depends)
+import Express (Express)
 import Orphans ()
 
 import qualified Depends
+import qualified Express
 
 data Package =
     Package
@@ -56,32 +58,23 @@ data Package =
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
-instance ToJSON Package where
-    toJSON pkg =
-        Aeson.object
-            [ "libraries" .= libraries
-            , "executables" .= executables
-            , "tests" .= tests
-            , "benchmarks" .= benchmarks
-            , "setup" .= setup
-            , "flags" .= flags
+instance Express Package where
+    express pkg =
+        (Express.express . Map.fromList)
+            [ ("libraries", expressComponents libraries)
+            , ("executables", expressComponents executables)
+            , ("tests", expressComponents tests)
+            , ("benchmarks", expressComponents benchmarks)
+            , ("setup", Express.express setup)
+            , ("flags", expressFlags flags)
             ]
       where
-        Package { libraries, executables, tests, benchmarks, setup } = pkg
-        Package { flags } = pkg
-
-    toEncoding pkg =
-        (Aeson.pairs . mconcat)
-            [ "libraries" .= libraries
-            , "executables" .= executables
-            , "tests" .= tests
-            , "benchmarks" .= benchmarks
-            , "setup" .= setup
-            , "flags" .= flags
-            ]
-      where
-        Package { libraries, executables, tests, benchmarks, setup } = pkg
-        Package { flags } = pkg
+        Package { libraries, executables, tests, benchmarks } = pkg
+        Package { setup, flags } = pkg
+        expressComponents =
+            Express.express . Map.mapKeys (Text.pack . unUnqualComponentName)
+        expressFlags =
+            Express.express . Map.mapKeys (Text.pack . unFlagName)
 
 fromPackageDescription :: (PackageDescription, FlagAssignment) -> Package
 fromPackageDescription (pkgDesc, flagAssignment) =
@@ -189,13 +182,12 @@ forPlatforms
     -> IO (Map Platform Package)
 forPlatforms compilerInfo platforms cabalFile =
     Exception.handle nonFatalErrors
-      (do
+      do
         gPkgDesc <- readGenericPackageDescription Verbosity.silent cabalFile
         let
           forPlatform' = Package.forPlatform compilerInfo gPkgDesc
           packages = Map.fromSet forPlatform' platforms
         return packages
-      )
   where
     -- Display errors, but do not abort; return an empty Map instead.
     nonFatalErrors (Exception.SomeException e) =

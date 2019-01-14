@@ -14,11 +14,13 @@ dependencies:
   - Cabal
   - containers
   - filepath
+  - hnix
   - optparse-applicative
   - process
   - text
 
 default-extensions:
+  - BlockArguments
   - DeriveDataTypeable
   - DeriveGeneric
   - DuplicateRecordFields
@@ -27,6 +29,7 @@ default-extensions:
   - NamedFieldPuns
   - OverloadedStrings
   - ScopedTypeVariables
+  - TypeFamilies
   - ViewPatterns
 
 library:
@@ -38,6 +41,7 @@ executables:
     main: cabal-nix.hs
     dependencies:
       - cabal-nix
+      - prettyprinter
   all-cabal-nix:
     main: all-cabal-nix.hs
     dependencies:

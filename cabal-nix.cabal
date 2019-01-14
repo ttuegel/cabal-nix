@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 73ef42f8ef124ec8d14f0878243a9b940b20cb6229925251e5f2194679f76d79
+-- hash: 2c600a3d18c16be27e40c3a46e44fb4f8ef7283cffef508863e64ffc03d2450f
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -19,6 +19,7 @@ build-type:     Simple
 library
   exposed-modules:
       Depends
+      Express
       Hash
       Options
       Orphans
@@ -30,7 +31,7 @@ library
       Paths_cabal_nix
   hs-source-dirs:
       src
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables ViewPatterns
+  default-extensions: BlockArguments DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeFamilies ViewPatterns
   build-depends:
       Cabal
     , aeson
@@ -38,6 +39,7 @@ library
     , bytestring
     , containers
     , filepath
+    , hnix
     , optparse-applicative
     , process
     , text
@@ -47,7 +49,7 @@ executable all-cabal-nix
   main-is: all-cabal-nix.hs
   other-modules:
       Paths_cabal_nix
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables ViewPatterns
+  default-extensions: BlockArguments DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeFamilies ViewPatterns
   ghc-options: -threaded "-with-rtsopts=-N -qg"
   build-depends:
       Cabal
@@ -59,6 +61,7 @@ executable all-cabal-nix
     , containers
     , directory
     , filepath
+    , hnix
     , monads-tf
     , optparse-applicative
     , process
@@ -69,7 +72,7 @@ executable cabal-nix
   main-is: cabal-nix.hs
   other-modules:
       Paths_cabal_nix
-  default-extensions: DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables ViewPatterns
+  default-extensions: BlockArguments DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeFamilies ViewPatterns
   build-depends:
       Cabal
     , aeson
@@ -78,7 +81,9 @@ executable cabal-nix
     , cabal-nix
     , containers
     , filepath
+    , hnix
     , optparse-applicative
+    , prettyprinter
     , process
     , text
   default-language: Haskell2010

@@ -10,14 +10,21 @@ import Data.Typeable (Typeable)
 import Distribution.Types.Dependency (Dependency (..))
 import Distribution.Types.ExeDependency (ExeDependency (..))
 import Distribution.Types.PackageName (PackageName)
+import Distribution.Types.PackageName (unPackageName)
 import Distribution.Types.PkgconfigDependency (PkgconfigDependency (..))
 import Distribution.Types.PkgconfigName (PkgconfigName)
+import Distribution.Types.PkgconfigName (unPkgconfigName)
 import GHC.Generics (Generic)
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Distribution.Pretty as Pretty
+
+import Express (Express)
+
+import qualified Express
 
 data Depends =
     Depends
@@ -26,6 +33,27 @@ data Depends =
         , buildDepends :: Set PackageName
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance Express Depends where
+    express depends =
+        (Express.express . Map.fromList)
+            [ ("toolDepends", toolDepends')
+            , ("pkgconfigDepends", pkgconfigDepends')
+            , ("buildDepends", buildDepends')
+            ]
+      where
+        toolDepends' =
+            Set.map (Text.pack . unPackageName) toolDepends
+          where
+            Depends { toolDepends } = depends
+        pkgconfigDepends' =
+            Set.map (Text.pack . unPkgconfigName) pkgconfigDepends
+          where
+            Depends { pkgconfigDepends } = depends
+        buildDepends' =
+            Set.map (Text.pack . unPackageName) buildDepends
+          where
+            Depends { buildDepends } = depends
 
 instance ToJSON Depends where
     toJSON depends =

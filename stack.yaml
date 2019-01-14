@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-12.26
+resolver: lts-13.3
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -42,7 +42,13 @@ nix:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
-# extra-deps: []
+extra-deps:
+  - git: https://github.com/haskell-nix/hnix.git
+    commit: 617d0867ab96c8f97b02c4524bd948d9f114005e
+  - ref-tf-0.4.0.1@sha256:fe808d143a0bf19437b5ba65c74bcb5cda709944b52e13c16528864a5d897f03
+  - serialise-0.2.1.0@sha256:8d6051f64c6ebfaf705195dd0b8dfb667617f2e674b290ed2e44985009e4f951
+  - hashing-0.1.0.1@sha256:98861f16791946cdf28e3c7a6ee9ac8b72d546d6e33c569c7087ef18253294e7
+  - monadlist-0.0.2@sha256:978305e3f03dd5f65c673b551124dac0c39a247c2c14d84739ca9a3405fbb63a
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -58,17 +58,16 @@ writePackage
     -> IO ()
 writePackage allCabalHashes packageId =
     Exception.handle nonFatalErrors
-        (do
-          package <-
-              Package.fromAllCabalHashes
-                  (cabalFile allCabalHashes packageId)
-                  (jsonFile allCabalHashes packageId)
-          let outFile = packageFile packageId
-          Directory.createDirectoryIfMissing
-              True
-              (FilePath.takeDirectory outFile)
-          Aeson.encodeFile outFile package
-        )
+      do
+        package <-
+            Package.fromAllCabalHashes
+                (cabalFile allCabalHashes packageId)
+                (jsonFile allCabalHashes packageId)
+        let outFile = packageFile packageId
+        Directory.createDirectoryIfMissing
+            True
+            (FilePath.takeDirectory outFile)
+        Aeson.encodeFile outFile package
   where
     -- Display errors, but do not abort; return an empty Map instead.
     nonFatalErrors (Exception.SomeException e) =
@@ -82,10 +81,9 @@ writePackages
     -> Concurrently ()
 writePackages qsem allCabalHashes package =
     concurrently qsem
-        (do
-          packageIds <- getPackageIds allCabalHashes package
-          traverse_ (writePackage allCabalHashes) packageIds
-        )
+      do
+        packageIds <- getPackageIds allCabalHashes package
+        traverse_ (writePackage allCabalHashes) packageIds
 
 cabalFile :: FilePath -> PackageId -> FilePath
 cabalFile allCabalHashes PackageIdentifier { pkgName, pkgVersion } =
