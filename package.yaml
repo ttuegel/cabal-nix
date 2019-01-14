@@ -45,7 +45,4 @@ executables:
       - async
       - directory
       - monads-tf
-      - pipes
-      - pipes-aeson
-      - pipes-bytestring
     ghc-options: -threaded "-with-rtsopts=-N -qg"

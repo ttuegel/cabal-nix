@@ -7,9 +7,9 @@ import Data.Maybe
 import Distribution.Simple.Setup (readPToMaybe)
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
-import Pipes ((>->))
 import System.FilePath ((</>), (<.>))
 
+import qualified Data.Aeson as Aeson
 import qualified Control.Concurrent as Concurrent
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exception
@@ -17,9 +17,6 @@ import qualified Control.Monad as Monad
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
 import qualified Options.Applicative as Options
-import qualified Pipes as Pipes
-import qualified Pipes.Aeson.Unchecked as Pipes.Aeson
-import qualified Pipes.ByteString as Pipes.ByteString
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified System.IO as IO
@@ -70,10 +67,7 @@ writePackage allCabalHashes packageId =
           Directory.createDirectoryIfMissing
               True
               (FilePath.takeDirectory outFile)
-          IO.withFile outFile IO.WriteMode
-              (\(Pipes.ByteString.toHandle -> out) ->
-                  Pipes.runEffect (Pipes.Aeson.encode package >-> out)
-              )
+          Aeson.encodeFile outFile package
         )
   where
     -- Display errors, but do not abort; return an empty Map instead.

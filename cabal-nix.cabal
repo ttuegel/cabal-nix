@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 45b85671e78c1719d6eab2325ea895b33cbd3d31a4b4b0b587b7168ee9ba0a4e
+-- hash: 73ef42f8ef124ec8d14f0878243a9b940b20cb6229925251e5f2194679f76d79
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -61,9 +61,6 @@ executable all-cabal-nix
     , filepath
     , monads-tf
     , optparse-applicative
-    , pipes
-    , pipes-aeson
-    , pipes-bytestring
     , process
     , text
   default-language: Haskell2010
