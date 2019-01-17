@@ -37,8 +37,8 @@ library:
     - src
 
 executables:
-  cabal-nix:
-    main: cabal-nix.hs
+  cabal-nix-finalize:
+    main: cabal-nix-finalize.hs
     dependencies:
       - cabal-nix
       - prettyprinter

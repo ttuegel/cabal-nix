@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2c600a3d18c16be27e40c3a46e44fb4f8ef7283cffef508863e64ffc03d2450f
+-- hash: cb586a3167ea9fcbfe39a4340d9994d6f9fc5cbfac5025caa53b78a383879435
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -68,8 +68,8 @@ executable all-cabal-nix
     , text
   default-language: Haskell2010
 
-executable cabal-nix
-  main-is: cabal-nix.hs
+executable cabal-nix-finalize
+  main-is: cabal-nix-finalize.hs
   other-modules:
       Paths_cabal_nix
   default-extensions: BlockArguments DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeFamilies ViewPatterns
