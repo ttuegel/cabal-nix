@@ -31,7 +31,7 @@ nixHash :: FilePath -> IO Hash
 nixHash file =
   do
     let
-      args = [ "--type", "sha256", "--base32", file ]
+      args = [ "--flat", "--type", "sha256", "--base32", file ]
       inp = mempty
     unpacked <- Process.readProcess "nix-hash" args inp
     case lines unpacked of
