@@ -3,7 +3,6 @@
 module Package.Shared
     ( Package (..)
     , fromGenericPackageDescription
-    , fromAllCabalHashes
     ) where
 
 import Data.Aeson (ToJSON)
@@ -13,16 +12,15 @@ import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Distribution.License (licenseToSPDX)
-import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.SPDX.License (License)
 import Distribution.Types.GenericPackageDescription (GenericPackageDescription (..))
 import Distribution.Types.PackageDescription (PackageDescription (..))
 import Distribution.Types.PackageId (PackageIdentifier (..))
+import Nix.Expr (($=))
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Distribution.Verbosity as Verbosity
+import qualified Nix.Expr
 
 import Express (Express)
 import Hash (Hash)
@@ -31,8 +29,6 @@ import Revision
 import Src (Src)
 
 import qualified Express
-import qualified Hash
-import qualified Src
 
 data Package =
     Package
@@ -47,14 +43,14 @@ data Package =
 
 instance Express Package where
     express pkg =
-        (Express.express . Map.fromList)
-            [ ("pname", Express.express pkgName)
-            , ("version", Express.express pkgVersion)
-            , ("revision", Express.express revision)
-            , ("src", Express.express src)
-            , ("license", Express.express license)
-            , ("homepage", Express.express homepage)
-            , ("synopsis", Express.express synopsis)
+        Nix.Expr.mkNonRecSet
+            [ "pname" $= Express.express pkgName
+            , "version" $= Express.express pkgVersion
+            , "revision" $= Express.express revision
+            , "src" $= Express.express src
+            , "license" $= Express.express license
+            , "homepage" $= Express.express homepage
+            , "synopsis" $= Express.express synopsis
             ]
       where
         PackageIdentifier { pkgName, pkgVersion } = package
@@ -137,13 +133,3 @@ fromGenericPackageDescription cabalHash src gPkgDesc =
     fromPackageDescription cabalHash src pkgDesc
   where
     GenericPackageDescription { packageDescription = pkgDesc } = gPkgDesc
-
-fromAllCabalHashes
-    :: FilePath  -- ^ Cabal package description file
-    -> FilePath  -- ^ all-cabal-hashes file
-    -> IO Package
-fromAllCabalHashes cabal json =
-    fromGenericPackageDescription
-        <$> Hash.nixHash cabal
-        <*> Src.readSrc json
-        <*> readGenericPackageDescription Verbosity.silent cabal

@@ -5,6 +5,7 @@ import Control.Concurrent.Async (Concurrently)
 import Data.Foldable
 import Data.Maybe
 import Data.Text.Prettyprint.Doc (Doc)
+import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.Simple.Setup (readPToMaybe)
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
@@ -16,6 +17,7 @@ import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
+import qualified Distribution.Verbosity as Verbosity
 import qualified Data.Text.Prettyprint.Doc.Render.Text as Pretty
 import qualified Options.Applicative as Options
 import qualified Nix.Pretty as Nix
@@ -26,8 +28,10 @@ import qualified System.IO as IO
 import Orphans ()
 
 import qualified Express
+import qualified Hash
 import qualified Options
-import qualified Package.Shared as Package
+import qualified Package.Shared as Shared
+import qualified Src
 
 data Options =
     Options
@@ -55,6 +59,19 @@ withQSem qsem =
         (Concurrent.waitQSem qsem)
         (Concurrent.signalQSem qsem)
 
+fromAllCabalHashes
+    :: FilePath
+    -> PackageId
+    -> IO Shared.Package
+fromAllCabalHashes allCabalHashes packageId =
+    Shared.fromGenericPackageDescription
+        <$> Hash.nixHash cabal
+        <*> Src.readSrc json
+        <*> readGenericPackageDescription Verbosity.silent cabal
+  where
+    cabal = cabalFile allCabalHashes packageId
+    json = jsonFile allCabalHashes packageId
+
 mkdir :: FilePath -> IO ()
 mkdir = Directory.createDirectoryIfMissing True
 
@@ -69,17 +86,13 @@ writePackage
 writePackage allCabalHashes packageId =
     Exception.handle nonFatalErrors
       do
-        package <-
-            Package.fromAllCabalHashes
-                (cabalFile allCabalHashes packageId)
-                (jsonFile allCabalHashes packageId)
+        package <- fromAllCabalHashes allCabalHashes packageId
         let outFile = packageFile packageId
         mkdir (FilePath.takeDirectory outFile)
         writeDoc outFile (Nix.prettyNix $ Express.express package)
   where
-    -- Display errors, but do not abort; return an empty Map instead.
+    -- Display errors, but do not abort.
     nonFatalErrors (Exception.SomeException e) =
-      do
         IO.hPutStrLn IO.stderr (Exception.displayException e)
 
 writePackages
