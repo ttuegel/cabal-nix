@@ -37,4 +37,7 @@ instance (Express a, k ~ Text) => Express (Map.Strict.Map k a) where
 instance k ~ Text => Express (Set k) where
     express = express . Map.Strict.fromSet (const ())
 
+instance Express Text where
+    express = Nix.Expr.mkStr
+
 
