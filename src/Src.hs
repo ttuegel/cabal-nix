@@ -12,10 +12,16 @@ import GHC.Generics (Generic)
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 
+import Express (Express)
 import Hash
+
+import qualified Express
 
 data Src = Src { hash :: Hash }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance Express Src where
+    express = Express.express . hash
 
 instance FromJSON Src where
     parseJSON =
