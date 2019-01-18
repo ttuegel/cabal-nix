@@ -5,6 +5,7 @@ module Express where
 
 import Data.Set (Set)
 import Data.Text (Text)
+import Distribution.SPDX (License)
 import Distribution.Types.PackageName (PackageName)
 import Distribution.Types.Version (Version)
 import Nix.Expr (NExpr)
@@ -13,6 +14,7 @@ import Numeric.Natural (Natural)
 
 import qualified Data.Map.Strict as Map.Strict
 import qualified Data.Text as Text
+import qualified Distribution.Pretty
 import qualified Distribution.Text
 import qualified Nix.Expr
 
@@ -56,3 +58,6 @@ instance Express Integer where
 
 instance Express Natural where
     express n = express (fromIntegral n :: Integer)
+
+instance Express License where
+    express = express . Text.pack . Distribution.Pretty.prettyShow
