@@ -5,10 +5,13 @@ module Express where
 
 import Data.Set (Set)
 import Data.Text (Text)
+import Distribution.Types.PackageName (PackageName)
 import Nix.Expr (NExpr)
 import Nix.Expr (($=))
 
 import qualified Data.Map.Strict as Map.Strict
+import qualified Data.Text as Text
+import qualified Distribution.Text
 import qualified Nix.Expr
 
 class Express a where
@@ -40,4 +43,5 @@ instance k ~ Text => Express (Set k) where
 instance Express Text where
     express = Nix.Expr.mkStr
 
-
+instance Express PackageName where
+    express = express . Text.pack . Distribution.Text.display
