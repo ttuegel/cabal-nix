@@ -4,25 +4,28 @@ import Control.Concurrent (QSem)
 import Control.Concurrent.Async (Concurrently)
 import Data.Foldable
 import Data.Maybe
+import Data.Text.Prettyprint.Doc (Doc)
 import Distribution.Simple.Setup (readPToMaybe)
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
 import System.FilePath ((</>), (<.>))
 
-import qualified Data.Aeson as Aeson
 import qualified Control.Concurrent as Concurrent
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
+import qualified Data.Text.Prettyprint.Doc.Render.Text as Pretty
 import qualified Options.Applicative as Options
+import qualified Nix.Pretty as Nix
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified System.IO as IO
 
 import Orphans ()
 
+import qualified Express
 import qualified Options
 import qualified Package.Shared as Package
 
@@ -52,6 +55,13 @@ withQSem qsem =
         (Concurrent.waitQSem qsem)
         (Concurrent.signalQSem qsem)
 
+mkdir :: FilePath -> IO ()
+mkdir = Directory.createDirectoryIfMissing True
+
+writeDoc :: FilePath -> Doc ann -> IO ()
+writeDoc fileName doc =
+    IO.withFile fileName IO.WriteMode (\h -> Pretty.hPutDoc h doc)
+
 writePackage
     :: FilePath
     -> PackageId
@@ -64,10 +74,8 @@ writePackage allCabalHashes packageId =
                 (cabalFile allCabalHashes packageId)
                 (jsonFile allCabalHashes packageId)
         let outFile = packageFile packageId
-        Directory.createDirectoryIfMissing
-            True
-            (FilePath.takeDirectory outFile)
-        Aeson.encodeFile outFile package
+        mkdir (FilePath.takeDirectory outFile)
+        writeDoc outFile (Nix.prettyNix $ Express.express package)
   where
     -- Display errors, but do not abort; return an empty Map instead.
     nonFatalErrors (Exception.SomeException e) =
@@ -101,7 +109,7 @@ jsonFile allCabalHashes PackageIdentifier { pkgName, pkgVersion } =
 
 packageFile :: PackageId -> FilePath
 packageFile packageId@PackageIdentifier { pkgName } =
-    Pretty.prettyShow pkgName </> Pretty.prettyShow packageId <.> "json"
+    Pretty.prettyShow pkgName </> Pretty.prettyShow packageId <.> "nix"
 
 getPackageIds
     :: FilePath  -- ^ Cabal hashes

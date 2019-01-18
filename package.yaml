@@ -49,4 +49,5 @@ executables:
       - async
       - directory
       - monads-tf
+      - prettyprinter
     ghc-options: -threaded "-with-rtsopts=-N -qg"
