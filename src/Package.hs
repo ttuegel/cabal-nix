@@ -30,6 +30,7 @@ import Distribution.Types.TestSuite (TestSuite (..))
 import Distribution.Types.UnqualComponentName (UnqualComponentName)
 import Distribution.Types.UnqualComponentName (mkUnqualComponentName)
 import Distribution.Types.UnqualComponentName (unUnqualComponentName)
+import Nix.Expr (($=))
 
 import qualified Control.Exception as Exception
 import qualified Data.Map.Strict as Map
@@ -38,6 +39,7 @@ import qualified Distribution.PackageDescription.Configuration as PackageDescrip
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Simple.BuildToolDepends as BuildToolDepends
 import qualified Distribution.Verbosity as Verbosity
+import qualified Nix.Expr
 import qualified System.IO as IO
 
 import Depends (Depends)
@@ -60,13 +62,13 @@ data Package =
 
 instance Express Package where
     express pkg =
-        (Express.express . Map.fromList)
-            [ ("libraries", expressComponents libraries)
-            , ("executables", expressComponents executables)
-            , ("tests", expressComponents tests)
-            , ("benchmarks", expressComponents benchmarks)
-            , ("setup", Express.express setup)
-            , ("flags", expressFlags flags)
+        Nix.Expr.mkNonRecSet
+            [ "libraries" $= expressComponents libraries
+            , "executables" $= expressComponents executables
+            , "tests" $= expressComponents tests
+            , "benchmarks" $= expressComponents benchmarks
+            , "setup" $= Express.express setup
+            , "flags" $= expressFlags flags
             ]
       where
         Package { libraries, executables, tests, benchmarks } = pkg

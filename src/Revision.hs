@@ -7,10 +7,11 @@ import Data.Aeson ((.=))
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Nix.Expr (($=))
 import Numeric.Natural (Natural)
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Map.Strict as Map
+import qualified Nix.Expr
 
 import Express (Express)
 import Hash
@@ -26,9 +27,9 @@ data Revision =
 
 instance Express Revision where
     express rev =
-        (Express.express . Map.fromList)
-            [ ("revision", Express.express revision)
-            , ("sha256", Express.express hash)
+        Nix.Expr.mkNonRecSet
+            [ "revision" $= Express.express revision
+            , "sha256" $= Express.express hash
             ]
       where
         Revision { revision, hash } = rev

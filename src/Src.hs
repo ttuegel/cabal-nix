@@ -8,9 +8,11 @@ import Data.Data (Data)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
+import Nix.Expr (($=))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
+import qualified Nix.Expr
 
 import Express (Express)
 import Hash
@@ -21,7 +23,11 @@ data Src = Src { hash :: Hash }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 instance Express Src where
-    express = Express.express . hash
+    express src =
+        Nix.Expr.mkNonRecSet
+            [ "sha256" $= Express.express hash ]
+      where
+        Src { hash } = src
 
 instance FromJSON Src where
     parseJSON =

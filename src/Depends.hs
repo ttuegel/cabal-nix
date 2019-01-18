@@ -15,12 +15,14 @@ import Distribution.Types.PkgconfigDependency (PkgconfigDependency (..))
 import Distribution.Types.PkgconfigName (PkgconfigName)
 import Distribution.Types.PkgconfigName (unPkgconfigName)
 import GHC.Generics (Generic)
+import Nix.Expr (($=))
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Distribution.Pretty as Pretty
+import qualified Nix.Expr
 
 import Express (Express)
 
@@ -29,31 +31,23 @@ import qualified Express
 data Depends =
     Depends
         { toolDepends :: Set PackageName
-        , pkgconfigDepends :: Set PkgconfigName
         , buildDepends :: Set PackageName
+        , pkgconfigDepends :: Set PkgconfigName
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
 
 instance Express Depends where
     express depends =
-        (Express.express . Map.fromList)
-            [ ("toolDepends", toolDepends')
-            , ("pkgconfigDepends", pkgconfigDepends')
-            , ("buildDepends", buildDepends')
+        Nix.Expr.mkNonRecSet
+            [ "buildDepends" $= expressPackages buildDepends
+            , "toolDepends" $= expressPackages toolDepends
+            , "pkgconfigDepends" $= expressPkgconfigs pkgconfigDepends
             ]
       where
-        toolDepends' =
-            Set.map (Text.pack . unPackageName) toolDepends
-          where
-            Depends { toolDepends } = depends
-        pkgconfigDepends' =
-            Set.map (Text.pack . unPkgconfigName) pkgconfigDepends
-          where
-            Depends { pkgconfigDepends } = depends
-        buildDepends' =
-            Set.map (Text.pack . unPackageName) buildDepends
-          where
-            Depends { buildDepends } = depends
+        Depends { toolDepends, pkgconfigDepends, buildDepends } = depends
+        expressPackages = Express.express . Set.map (Text.pack . unPackageName)
+        expressPkgconfigs =
+            Express.express . Set.map (Text.pack . unPkgconfigName)
 
 instance ToJSON Depends where
     toJSON depends =
@@ -139,3 +133,7 @@ fromPkgconfigDependency (PkgconfigDependency depend _) =
 fromDependency :: Dependency -> Depends
 fromDependency (Dependency depend _) =
     mempty { buildDepends = Set.singleton depend }
+
+null :: Depends -> Bool
+null Depends { buildDepends, toolDepends, pkgconfigDepends } =
+    Set.null buildDepends && Set.null toolDepends && Set.null pkgconfigDepends
