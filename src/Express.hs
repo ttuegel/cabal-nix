@@ -18,7 +18,7 @@ instance Express NExpr where
     express = id
 
 instance Express () where
-    express = const (Nix.Expr.mkSym "null")
+    express = const Nix.Expr.mkNull
 
 instance Express Bool where
     express =
