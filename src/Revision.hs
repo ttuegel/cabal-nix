@@ -10,8 +10,12 @@ import GHC.Generics (Generic)
 import Numeric.Natural (Natural)
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Map.Strict as Map
 
+import Express (Express)
 import Hash
+
+import qualified Express
 
 data Revision =
     Revision
@@ -19,6 +23,15 @@ data Revision =
         , hash :: Hash  -- ^ Cabal package description hash
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance Express Revision where
+    express rev =
+        (Express.express . Map.fromList)
+            [ ("revision", Express.express revision)
+            , ("sha256", Express.express hash)
+            ]
+      where
+        Revision { revision, hash } = rev
 
 instance ToJSON Revision where
     toJSON Revision { revision, hash } =
