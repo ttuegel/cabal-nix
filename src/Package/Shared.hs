@@ -20,27 +20,47 @@ import Distribution.Types.PackageDescription (PackageDescription (..))
 import Distribution.Types.PackageId (PackageIdentifier (..))
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Distribution.Verbosity as Verbosity
 
+import Express (Express)
 import Hash (Hash)
 import Orphans ()
 import Revision
 import Src (Src)
 
+import qualified Express
 import qualified Hash
 import qualified Src
 
 data Package =
     Package
         { package :: PackageIdentifier
-        , revision :: Maybe Revision
+        , revision :: Revision
         , src :: Src
         , license :: License
         , homepage :: Text
         , synopsis :: Text
         }
   deriving (Data, Eq, Generic, Ord, Read, Show, Typeable)
+
+instance Express Package where
+    express pkg =
+        (Express.express . Map.fromList)
+            [ ("pname", Express.express pkgName)
+            , ("version", Express.express pkgVersion)
+            , ("revision", Express.express revision)
+            , ("src", Express.express src)
+            , ("license", Express.express license)
+            , ("homepage", Express.express homepage)
+            , ("synopsis", Express.express synopsis)
+            ]
+      where
+        PackageIdentifier { pkgName, pkgVersion } = package
+          where
+            Package { package } = pkg
+        Package { revision, src, license, homepage, synopsis } = pkg
 
 instance ToJSON Package where
     toJSON pkg =
@@ -98,11 +118,10 @@ fromPackageDescription cabalHash src pkgDesc =
       where
         PackageDescription { synopsis = synopsis' } = pkgDesc
     revision =
-      case lookup "x-revision" customFieldsPD of
-        Nothing ->
-            Nothing
-        Just n ->
-            Just Revision { revision = read n, hash = cabalHash }
+        Revision
+            { revision = maybe 0 read (lookup "x-revision" customFieldsPD)
+            , hash = cabalHash
+            }
       where
         PackageDescription { customFieldsPD } = pkgDesc
     license = either id licenseToSPDX licenseRaw
