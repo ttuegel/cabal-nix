@@ -9,6 +9,7 @@ import Distribution.Types.PackageName (PackageName)
 import Distribution.Types.Version (Version)
 import Nix.Expr (NExpr)
 import Nix.Expr (($=))
+import Numeric.Natural (Natural)
 
 import qualified Data.Map.Strict as Map.Strict
 import qualified Data.Text as Text
@@ -49,3 +50,9 @@ instance Express PackageName where
 
 instance Express Version where
     express = express . Text.pack . Distribution.Text.display
+
+instance Express Integer where
+    express = Nix.Expr.mkInt
+
+instance Express Natural where
+    express n = express (fromIntegral n :: Integer)
