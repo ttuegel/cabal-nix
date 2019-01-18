@@ -6,6 +6,7 @@ module Express where
 import Data.Set (Set)
 import Data.Text (Text)
 import Distribution.Types.PackageName (PackageName)
+import Distribution.Types.Version (Version)
 import Nix.Expr (NExpr)
 import Nix.Expr (($=))
 
@@ -44,4 +45,7 @@ instance Express Text where
     express = Nix.Expr.mkStr
 
 instance Express PackageName where
+    express = express . Text.pack . Distribution.Text.display
+
+instance Express Version where
     express = express . Text.pack . Distribution.Text.display
