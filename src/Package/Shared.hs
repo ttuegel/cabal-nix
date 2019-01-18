@@ -5,8 +5,6 @@ module Package.Shared
     , fromGenericPackageDescription
     ) where
 
-import Data.Aeson (ToJSON)
-import Data.Aeson.Types ((.=))
 import Data.Data (Data)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
@@ -17,15 +15,14 @@ import Distribution.Types.GenericPackageDescription (GenericPackageDescription (
 import Distribution.Types.PackageDescription (PackageDescription (..))
 import Distribution.Types.PackageId (PackageIdentifier (..))
 import Nix.Expr (($=))
+import Numeric.Natural (Natural)
 
-import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import qualified Nix.Expr
 
+import Cabal (Cabal)
 import Express (Express)
-import Hash (Hash)
 import Orphans ()
-import Revision
 import Src (Src)
 
 import qualified Express
@@ -33,7 +30,7 @@ import qualified Express
 data Package =
     Package
         { package :: PackageIdentifier
-        , revision :: Revision
+        , cabal :: Cabal
         , src :: Src
         , license :: License
         , homepage :: Text
@@ -44,62 +41,25 @@ data Package =
 instance Express Package where
     express pkg =
         Nix.Expr.mkNonRecSet
-            [ "pname" $= Express.express pkgName
-            , "version" $= Express.express pkgVersion
-            , "revision" $= Express.express revision
+            [ "package" $= Express.express package
+            , "cabal" $= Express.express cabal
             , "src" $= Express.express src
             , "license" $= Express.express license
             , "homepage" $= Express.express homepage
             , "synopsis" $= Express.express synopsis
             ]
       where
-        PackageIdentifier { pkgName, pkgVersion } = package
-          where
-            Package { package } = pkg
-        Package { revision, src, license, homepage, synopsis } = pkg
-
-instance ToJSON Package where
-    toJSON pkg =
-        Aeson.object
-            [ "pname" .= pkgName
-            , "version" .= pkgVersion
-            , "revision" .= revision
-            , "src" .= src
-            , "license" .= license
-            , "homepage" .= homepage
-            , "synopsis" .= synopsis
-            ]
-      where
-        PackageIdentifier { pkgName, pkgVersion } = package
-          where
-            Package { package } = pkg
-        Package { revision, src, license, homepage, synopsis } = pkg
-
-    toEncoding pkg =
-        (Aeson.pairs . mconcat)
-            [ "pname" .= pkgName
-            , "version" .= pkgVersion
-            , "revision" .= revision
-            , "src" .= src
-            , "license" .= license
-            , "homepage" .= homepage
-            , "synopsis" .= synopsis
-            ]
-      where
-        PackageIdentifier { pkgName, pkgVersion } = package
-          where
-            Package { package } = pkg
-        Package { revision, src, license, homepage, synopsis } = pkg
+        Package { package, cabal, src, license, homepage, synopsis } = pkg
 
 fromPackageDescription
-    :: Hash  -- ^ Hash of the Cabal package description
+    :: (Natural -> Cabal)
     -> Src
     -> PackageDescription
     -> Package
-fromPackageDescription cabalHash src pkgDesc =
+fromPackageDescription cabalAt src pkgDesc =
     Package
         { package
-        , revision
+        , cabal
         , src
         , license
         , homepage
@@ -113,11 +73,8 @@ fromPackageDescription cabalHash src pkgDesc =
     synopsis = Text.pack synopsis'
       where
         PackageDescription { synopsis = synopsis' } = pkgDesc
-    revision =
-        Revision
-            { revision = maybe 0 read (lookup "x-revision" customFieldsPD)
-            , hash = cabalHash
-            }
+    cabal =
+        cabalAt (maybe 0 read (lookup "x-revision" customFieldsPD))
       where
         PackageDescription { customFieldsPD } = pkgDesc
     license = either id licenseToSPDX licenseRaw
@@ -125,11 +82,11 @@ fromPackageDescription cabalHash src pkgDesc =
         PackageDescription { licenseRaw } = pkgDesc
 
 fromGenericPackageDescription
-    :: Hash  -- ^ Hash of the Cabal package description
+    :: (Natural -> Cabal)
     -> Src
     -> GenericPackageDescription
     -> Package
-fromGenericPackageDescription cabalHash src gPkgDesc =
-    fromPackageDescription cabalHash src pkgDesc
+fromGenericPackageDescription cabalAt src gPkgDesc =
+    fromPackageDescription cabalAt src pkgDesc
   where
     GenericPackageDescription { packageDescription = pkgDesc } = gPkgDesc

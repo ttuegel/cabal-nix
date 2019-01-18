@@ -6,6 +6,7 @@ module Express where
 import Data.Set (Set)
 import Data.Text (Text)
 import Distribution.SPDX (License)
+import Distribution.Types.PackageId (PackageIdentifier (..))
 import Distribution.Types.PackageName (PackageName)
 import Distribution.Types.Version (Version)
 import Nix.Expr (NExpr)
@@ -61,3 +62,12 @@ instance Express Natural where
 
 instance Express License where
     express = express . Text.pack . Distribution.Pretty.prettyShow
+
+instance Express PackageIdentifier where
+    express pkgId =
+        Nix.Expr.mkNonRecSet
+            [ "name" $= express pkgName
+            , "version" $= express pkgVersion
+            ]
+      where
+        PackageIdentifier { pkgName, pkgVersion } = pkgId

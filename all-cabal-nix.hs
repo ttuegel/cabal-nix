@@ -2,8 +2,10 @@ module Main (main) where
 
 import Control.Concurrent (QSem)
 import Control.Concurrent.Async (Concurrently)
+import Data.Aeson ((.:))
 import Data.Foldable
 import Data.Maybe
+import Data.Text (Text)
 import Data.Text.Prettyprint.Doc (Doc)
 import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.Simple.Setup (readPToMaybe)
@@ -15,6 +17,11 @@ import qualified Control.Concurrent as Concurrent
 import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Parser as Aeson
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Lazy as ByteString
+import qualified Data.Map.Strict as Map
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
 import qualified Distribution.Verbosity as Verbosity
@@ -25,13 +32,14 @@ import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified System.IO as IO
 
+import Hash
 import Orphans ()
+import Src
 
+import qualified Cabal
 import qualified Express
-import qualified Hash
 import qualified Options
 import qualified Package.Shared as Shared
-import qualified Src
 
 data Options =
     Options
@@ -59,15 +67,39 @@ withQSem qsem =
         (Concurrent.waitQSem qsem)
         (Concurrent.signalQSem qsem)
 
+readSrc :: FilePath -> IO Src
+readSrc file =
+  do
+    bytes <- ByteString.readFile file
+    case Aeson.decodeWith Aeson.json' parser bytes of
+      Nothing ->
+        (error . unwords) ["Failed to decode package hashes file:", file]
+      Just src ->
+        return (FromHackage src)
+  where
+    parser =
+        Aeson.parse (Aeson.withObject "package hashes" parseSrc)
+      where
+        parseSrc obj =
+          do
+            hashes <- obj .: "package-hashes"
+            case Map.lookup sha256 hashes of
+              Nothing -> fail "Missing SHA256 hash"
+              Just hash -> return (Hash hash)
+          where
+            sha256 :: Text = "SHA256"
+
 fromAllCabalHashes
     :: FilePath
     -> PackageId
     -> IO Shared.Package
 fromAllCabalHashes allCabalHashes packageId =
-    Shared.fromGenericPackageDescription
-        <$> Hash.nixHash cabal
-        <*> Src.readSrc json
-        <*> readGenericPackageDescription Verbosity.silent cabal
+  do
+    sha256 <- Hash.nixHash cabal
+    let cabalAt = Cabal.fromHackage sha256
+    src <- readSrc json
+    gPkgDescr <- readGenericPackageDescription Verbosity.silent cabal
+    return (Shared.fromGenericPackageDescription cabalAt src gPkgDescr)
   where
     cabal = cabalFile allCabalHashes packageId
     json = jsonFile allCabalHashes packageId
