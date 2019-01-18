@@ -10,8 +10,15 @@ import GHC.Generics (Generic)
 import qualified Data.Aeson as Aeson
 import qualified System.Process as Process
 
+import Express (Express)
+
+import qualified Express
+
 newtype Hash = Hash { getHash :: Text }
   deriving (Data, Eq, Generic, IsString, Ord, Read, Show, Typeable)
+
+instance Express Hash where
+    express = Express.express . getHash
 
 instance FromJSON Hash where
     parseJSON = Aeson.withText "hash" (return . Hash)
