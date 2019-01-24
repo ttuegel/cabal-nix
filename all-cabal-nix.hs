@@ -5,12 +5,15 @@ import Control.Concurrent.Async (Concurrently)
 import Data.Aeson ((.:))
 import Data.Foldable
 import Data.Maybe
+import Data.Set (Set)
 import Data.Text (Text)
 import Data.Text.Prettyprint.Doc (Doc)
 import Distribution.PackageDescription.Parsec (readGenericPackageDescription)
 import Distribution.Simple.Setup (readPToMaybe)
 import Distribution.Types.PackageId (PackageIdentifier (..), PackageId)
 import Distribution.Types.PackageName (mkPackageName)
+import Distribution.Types.PackageName (unPackageName)
+import Nix.Expr ((@@))
 import System.FilePath ((</>), (<.>))
 
 import qualified Control.Concurrent as Concurrent
@@ -22,11 +25,14 @@ import qualified Data.Aeson.Parser as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString.Lazy as ByteString
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Distribution.Pretty as Pretty
 import qualified Distribution.Text
 import qualified Distribution.Verbosity as Verbosity
 import qualified Data.Text.Prettyprint.Doc.Render.Text as Pretty
 import qualified Options.Applicative as Options
+import qualified Nix.Expr
 import qualified Nix.Pretty as Nix
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
@@ -114,7 +120,7 @@ writeDoc fileName doc =
 writePackage
     :: FilePath
     -> PackageId
-    -> IO ()
+    -> IO (Set PackageId)
 writePackage allCabalHashes packageId =
     Exception.handle nonFatalErrors
       do
@@ -122,21 +128,45 @@ writePackage allCabalHashes packageId =
         let outFile = packageFile packageId
         mkdir (FilePath.takeDirectory outFile)
         writeDoc outFile (Nix.prettyNix $ Express.express package)
+        return (Set.singleton packageId)
   where
     -- Display errors, but do not abort.
     nonFatalErrors (Exception.SomeException e) =
+      do
         IO.hPutStrLn IO.stderr (Exception.displayException e)
+        return Set.empty
 
 writePackages
     :: QSem
     -> FilePath
     -> FilePath
-    -> Concurrently ()
+    -> Concurrently (Set PackageId)
 writePackages qsem allCabalHashes package =
     concurrently qsem
       do
         packageIds <- getPackageIds allCabalHashes package
-        traverse_ (writePackage allCabalHashes) packageIds
+        written <- traverse (writePackage allCabalHashes) packageIds
+        return (Set.unions written)
+
+writeIndex :: Set PackageId -> IO ()
+writeIndex indexed =
+  do
+    let outFile = "index.nix"
+    writeDoc outFile (Nix.prettyNix index)
+  where
+    index = Nix.Expr.mkNonRecSet (mkBinding <$> toList indexed)
+    mkBinding packageId =
+        Nix.Expr.bindTo name importExpr
+      where
+        name = "\"" <> Text.pack prettyPackageId <> "\""
+        prettyPackageId = Pretty.prettyShow packageId
+        importExpr = Nix.Expr.mkSym "import" @@ Nix.Expr.mkRelPath packagePath
+        packagePath =
+            "."
+                </> unPackageName pkgName
+                </> prettyPackageId <.> "nix"
+          where
+            PackageIdentifier { pkgName } = packageId
 
 cabalFile :: FilePath -> PackageId -> FilePath
 cabalFile allCabalHashes PackageIdentifier { pkgName, pkgVersion } =
@@ -195,8 +225,11 @@ main =
     packages <- getPackages allCabalHashes
     njobs <- Concurrent.getNumCapabilities
     qsem <- Concurrent.newQSem njobs
-    Async.runConcurrently
-        (traverse_ (writePackages qsem allCabalHashes) packages)
+    written <-
+        Async.runConcurrently
+            (traverse (writePackages qsem allCabalHashes) packages)
+    let indexed = Set.unions written
+    writeIndex indexed
     return ()
   where
     parserInfo =
