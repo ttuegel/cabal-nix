@@ -15,6 +15,13 @@ parseCabalFile =
     info =
         [ Options.metavar "CABAL_FILE" ]
 
+parseResolver :: Options.Parser FilePath
+parseResolver =
+    Options.strArgument (mconcat info)
+  where
+    info =
+        [ Options.metavar "RESOLVER" ]
+
 parseAllCabalHashes :: Options.Parser FilePath
 parseAllCabalHashes =
     Options.strArgument (mconcat info)

@@ -21,9 +21,7 @@ import qualified Control.Concurrent.Async as Async
 import qualified Control.Exception as Exception
 import qualified Control.Monad as Monad
 import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Parser as Aeson
 import qualified Data.Aeson.Types as Aeson
-import qualified Data.ByteString.Lazy as ByteString
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -76,15 +74,16 @@ withQSem qsem =
 readSrc :: FilePath -> IO Src
 readSrc file =
   do
-    bytes <- ByteString.readFile file
-    case Aeson.decodeWith Aeson.json' parser bytes of
-      Nothing ->
-        (error . unwords) ["Failed to decode package hashes file:", file]
-      Just src ->
+    Just value <- Aeson.decodeFileStrict file
+    case Aeson.parseEither parser value of
+      Left err ->
+        (error . unwords) ["Failed to decode package hashes file:", file, err]
+      Right src ->
         return (FromHackage src)
   where
+    parser :: Aeson.Value -> Aeson.Parser Hash
     parser =
-        Aeson.parse (Aeson.withObject "package hashes" parseSrc)
+        Aeson.withObject "package hashes" parseSrc
       where
         parseSrc obj =
           do

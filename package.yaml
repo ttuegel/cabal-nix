@@ -51,3 +51,10 @@ executables:
       - monads-tf
       - prettyprinter
     ghc-options: -threaded "-with-rtsopts=-N -qg"
+  stackage-nix:
+    main: stackage-nix.hs
+    dependencies:
+      - cabal-nix
+      - prettyprinter
+      - unordered-containers
+      - yaml

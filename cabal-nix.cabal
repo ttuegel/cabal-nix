@@ -4,7 +4,7 @@ cabal-version: 2.2
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9269efdf008dd1a9e6d3af1461a4e0711801e2680659c5b615d788d79d0ed062
+-- hash: 02cef0dbfbfdf344055d05b97c266d0585ec7d1c84da464a1dddbb2b772ed2c0
 
 name:           cabal-nix
 version:        0.0.1.0
@@ -88,4 +88,26 @@ executable cabal-nix-finalize
     , prettyprinter
     , process
     , text
+  default-language: Haskell2010
+
+executable stackage-nix
+  main-is: stackage-nix.hs
+  other-modules:
+      Paths_cabal_nix
+  default-extensions: BlockArguments DeriveDataTypeable DeriveGeneric DuplicateRecordFields GeneralizedNewtypeDeriving LambdaCase NamedFieldPuns OverloadedStrings ScopedTypeVariables TypeFamilies ViewPatterns
+  build-depends:
+      Cabal
+    , aeson
+    , base >=4.7
+    , bytestring
+    , cabal-nix
+    , containers
+    , filepath
+    , hnix
+    , optparse-applicative
+    , prettyprinter
+    , process
+    , text
+    , unordered-containers
+    , yaml
   default-language: Haskell2010
